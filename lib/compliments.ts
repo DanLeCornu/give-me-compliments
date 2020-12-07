@@ -1,4 +1,4 @@
-export const compliments = [
+export const COMPLIMENTS = [
   "Your voice is as beautiful as a chorus of angels",
   "Your eyes shine like the stars in the night sky",
   "Your hair flows like the waters of the Vistula",

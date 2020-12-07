@@ -1,10 +1,11 @@
 import React from "react"
-import { Text, View, Button, Platform, AppState, AppStateStatus } from "react-native"
+import { Text, View, Button, Platform } from "react-native"
 import Constants from "expo-constants"
 import * as Notifications from "expo-notifications"
 import * as Permissions from "expo-permissions"
+import dayjs from "dayjs"
 
-import { compliments } from "./lib/compliments"
+import { COMPLIMENTS } from "./lib/compliments"
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -16,42 +17,42 @@ Notifications.setNotificationHandler({
 
 export default function App() {
   const [compliment, setCompliment] = React.useState(
-    compliments[Math.round(Math.random() * compliments.length)],
+    COMPLIMENTS[Math.round(Math.random() * COMPLIMENTS.length)],
   )
-  const [appState, setAppState] = React.useState(AppState.currentState)
+  const [countdown, setCountdown] = React.useState<dayjs.Dayjs>()
 
   const generateCompliment = () => {
-    let index = Math.round(Math.random() * compliments.length) - 1
+    let index = Math.round(Math.random() * COMPLIMENTS.length) - 1
     if (index < 0) index = 0
-    setCompliment(compliments[index])
-  }
-
-  React.useEffect(() => {
-    AppState.addEventListener("change", handleAppStateChange)
-    registerForPushNotificationsAsync()
-
+    setCompliment(COMPLIMENTS[index])
+    setCountdown(dayjs().add(10, "second"))
     Notifications.scheduleNotificationAsync({
       content: {
         sound: "default",
         title: "Hey Dorida!",
-        body: "You have a new compliment! Tap to read it.",
-        data: { data: "data here" },
+        body: "You have a new compliment!",
       },
-      trigger: {
-        seconds: 10,
-        repeats: true,
-      },
+      trigger: null,
     })
+  }
+
+  React.useEffect(() => {
+    registerForPushNotificationsAsync()
+    generateCompliment()
   }, [])
 
-  const handleAppStateChange = (nextAppState: AppStateStatus) => {
-    // For some reason when bringing back to foreground, the current state is "active" instead of "background"
-    if (appState.match(/inactive|background/) && nextAppState === "active") {
-      console.log("App has come to the foreground!")
-      generateCompliment()
-    }
-    setAppState(nextAppState)
-  }
+  React.useEffect(() => {
+    if (!countdown) return
+    const timeout = setTimeout(() => {
+      if (countdown.diff(dayjs(), "second") > 0) {
+        // TODO: FIX THIS SHIT this works most of the time ... wierd bug with dayjs, or i'm using it wrong ?? also sometimes it subtracts 2 seconds instead of one
+        setCountdown(countdown.subtract(0, "second"))
+      } else {
+        generateCompliment()
+      }
+    }, 1000)
+    return () => clearTimeout(timeout)
+  }, [countdown])
 
   return (
     <View
@@ -63,6 +64,13 @@ export default function App() {
     >
       <View>
         <Text>{compliment}</Text>
+        {countdown && (
+          <Text>
+            Next compliment in {countdown.diff(dayjs(), "hour")} hours,{" "}
+            {countdown.diff(dayjs(), "minute") - countdown.diff(dayjs(), "hour") * 60} minutes, and{" "}
+            {countdown.diff(dayjs(), "second") - countdown.diff(dayjs(), "minute") * 60} seconds
+          </Text>
+        )}
         <Button title="Generate" onPress={generateCompliment} />
         <Button title="Stop notifications" onPress={Notifications.cancelAllScheduledNotificationsAsync} />
       </View>
@@ -88,7 +96,6 @@ async function registerForPushNotificationsAsync() {
   } else {
     alert("Must use physical device for Push Notifications")
   }
-
   if (Platform.OS === "android") {
     Notifications.setNotificationChannelAsync("default", {
       name: "default",
@@ -97,6 +104,5 @@ async function registerForPushNotificationsAsync() {
       lightColor: "#FF231F7C",
     })
   }
-
   return token
 }
