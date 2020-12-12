@@ -1,6 +1,5 @@
 import React from "react"
 import { Text, AppState, View, Platform, TouchableOpacity, AppStateStatus, Alert } from "react-native"
-import * as Linking from "expo-linking"
 import Constants from "expo-constants"
 import * as Notifications from "expo-notifications"
 import * as Permissions from "expo-permissions"

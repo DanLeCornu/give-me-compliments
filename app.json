@@ -20,7 +20,6 @@
       "package": "co.noquarter.givemecompliments",
       "versionCode": 1,
       "permissions": [],
-      "primaryColor": "#FCF2E8",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FCF2E8"
