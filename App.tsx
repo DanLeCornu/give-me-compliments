@@ -1,11 +1,41 @@
 import React from "react"
-import { Text, View, Button, Platform } from "react-native"
+import { Text, AppState, View, Platform, TouchableOpacity, AppStateStatus, Alert } from "react-native"
 import Constants from "expo-constants"
 import * as Notifications from "expo-notifications"
 import * as Permissions from "expo-permissions"
-import dayjs from "dayjs"
+import * as TaskManager from "expo-task-manager"
+import * as BackgroundFetch from "expo-background-fetch"
 
 import { COMPLIMENTS } from "./lib/compliments"
+import { QuoteEnd, QuoteStart, Refresh } from "./components/icons"
+import useCachedResources from "./hooks/useCachedResources"
+import { IS_PRODUCTION } from "./lib/config"
+import { Updates } from "expo"
+
+const NOTIFICATION_TASK = "background-notification-task"
+
+TaskManager.defineTask(NOTIFICATION_TASK, () => {
+  try {
+    Notifications.scheduleNotificationAsync({
+      content: {
+        sound: "default",
+        title: "Hej Dorida!",
+        body: "Czeka na Ciebie nowy komplement!",
+      },
+      trigger: null,
+    })
+    return BackgroundFetch.Result.NoData
+  } catch (error) {
+    console.log(error)
+    return BackgroundFetch.Result.Failed
+  }
+})
+
+BackgroundFetch.registerTaskAsync(NOTIFICATION_TASK, {
+  minimumInterval: 60 * 60 * 24,
+  stopOnTerminate: false,
+  startOnBoot: true,
+})
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -16,66 +46,91 @@ Notifications.setNotificationHandler({
 })
 
 export default function App() {
-  const [compliment, setCompliment] = React.useState(
-    COMPLIMENTS[Math.round(Math.random() * COMPLIMENTS.length)],
-  )
-  const [countdown, setCountdown] = React.useState<dayjs.Dayjs>()
+  const isLoadingComplete = useCachedResources()
+  const [compliment, setCompliment] = React.useState("")
+  const [checkingUpdates, setCheckingUpdates] = React.useState(false)
+  const [ready, setReady] = React.useState(false)
 
   const generateCompliment = () => {
     let index = Math.round(Math.random() * COMPLIMENTS.length) - 1
     if (index < 0) index = 0
     setCompliment(COMPLIMENTS[index])
-    setCountdown(dayjs().add(10, "second"))
-    Notifications.scheduleNotificationAsync({
-      content: {
-        sound: "default",
-        title: "Hey Dorida!",
-        body: "You have a new compliment!",
-      },
-      trigger: null,
-    })
   }
 
   React.useEffect(() => {
+    checkForUpdates()
+    AppState.addEventListener("change", handleAppStateChange)
     registerForPushNotificationsAsync()
     generateCompliment()
+    return () => {
+      AppState.removeEventListener("change", handleAppStateChange)
+    }
   }, [])
 
-  React.useEffect(() => {
-    if (!countdown) return
-    const timeout = setTimeout(() => {
-      if (countdown.diff(dayjs(), "second") > 0) {
-        // TODO: FIX THIS SHIT this works most of the time ... wierd bug with dayjs, or i'm using it wrong ?? also sometimes it subtracts 2 seconds instead of one
-        setCountdown(countdown.subtract(0, "second"))
-      } else {
-        generateCompliment()
+  const checkForUpdates = async () => {
+    try {
+      if (IS_PRODUCTION && !checkingUpdates) {
+        setCheckingUpdates(true)
+        const update = await Updates.checkForUpdateAsync()
+        if (update.isAvailable) await Updates.reloadAsync()
+        setCheckingUpdates(false)
       }
-    }, 1000)
-    return () => clearTimeout(timeout)
-  }, [countdown])
+      setReady(true)
+    } catch (error) {
+      console.log(error)
+      setReady(true)
+    }
+  }
 
-  return (
-    <View
-      style={{
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "space-around",
-      }}
-    >
-      <View>
-        <Text>{compliment}</Text>
-        {countdown && (
-          <Text>
-            Next compliment in {countdown.diff(dayjs(), "hour")} hours,{" "}
-            {countdown.diff(dayjs(), "minute") - countdown.diff(dayjs(), "hour") * 60} minutes, and{" "}
-            {countdown.diff(dayjs(), "second") - countdown.diff(dayjs(), "minute") * 60} seconds
-          </Text>
-        )}
-        <Button title="Generate" onPress={generateCompliment} />
-        <Button title="Stop notifications" onPress={Notifications.cancelAllScheduledNotificationsAsync} />
+  const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+    if (AppState.currentState !== "active" && nextAppState === "active") {
+      await checkForUpdates()
+      generateCompliment()
+    }
+  }
+
+  const handleRefresh = () => {
+    Alert.alert("Nie bądź taka chciwa!")
+  }
+
+  if (!isLoadingComplete || !ready) {
+    return null
+  } else {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "space-around",
+          padding: 50,
+          backgroundColor: "#FCF2E8",
+        }}
+      >
+        <View>
+          <QuoteStart style={{ marginLeft: 15 }} fill="#444444" />
+          <View
+            style={{
+              paddingLeft: 30,
+              paddingRight: 30,
+              paddingBottom: 20,
+              paddingTop: 20,
+              borderRadius: 15,
+              backgroundColor: "#2C97A5",
+            }}
+          >
+            <Text style={{ fontFamily: "amatic-SC", fontSize: 40, color: "#FCF2E8" }}>{compliment}</Text>
+          </View>
+          <View style={{ alignItems: "flex-end", marginTop: 15 }}>
+            <QuoteEnd fill="#444444" />
+          </View>
+        </View>
+        <TouchableOpacity onPress={handleRefresh} style={{ position: "absolute", bottom: 20, left: 20 }}>
+          <Refresh fill="#444444" />
+        </TouchableOpacity>
+        <Text style={{ position: "absolute", bottom: 20, right: 20, color: "#444444" }}>v1.0.0</Text>
       </View>
-    </View>
-  )
+    )
+  }
 }
 
 async function registerForPushNotificationsAsync() {
@@ -92,7 +147,6 @@ async function registerForPushNotificationsAsync() {
       return
     }
     token = (await Notifications.getExpoPushTokenAsync()).data
-    console.log(token)
   } else {
     alert("Must use physical device for Push Notifications")
   }
