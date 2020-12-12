@@ -1,10 +1,12 @@
 {
   "expo": {
-    "name": "give-me-compliments",
-    "slug": "give-me-compliments",
+    "name": "Give Me Compliments",
+    "slug": "giveMeCompliments",
     "version": "1.0.0",
+    "platforms": ["android"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "backgroundColor": "#FCF2E8",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -14,21 +16,16 @@
       "fallbackToCacheTimeout": 0
     },
     "assetBundlePatterns": ["**/*"],
-    "ios": {
-      "supportsTablet": true,
-      "infoPlist": {
-        "UIBackgroundModes": ["fetch"]
-      }
-    },
     "android": {
+      "package": "co.noquarter.givemecompliments",
+      "versionCode": 1,
+      "permissions": [],
+      "primaryColor": "#FCF2E8",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FCF2E8"
       },
       "useNextNotificationsApi": true
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     }
   }
 }
