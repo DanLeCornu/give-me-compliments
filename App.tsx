@@ -42,7 +42,7 @@ TaskManager.defineTask(NOTIFICATION_TASK, () => {
 })
 
 BackgroundFetch.registerTaskAsync(NOTIFICATION_TASK, {
-  minimumInterval: 60, // testing 1 minute intervals
+  minimumInterval: 60 * 60 * 12,
   stopOnTerminate: false,
   startOnBoot: true,
 })
