@@ -1,5 +1,14 @@
 import React from "react"
-import { Text, AppState, View, Platform, TouchableOpacity, AppStateStatus, Alert } from "react-native"
+import {
+  Text,
+  AppState,
+  View,
+  Platform,
+  TouchableOpacity,
+  AppStateStatus,
+  Alert,
+  StyleSheet,
+} from "react-native"
 import Constants from "expo-constants"
 import * as Notifications from "expo-notifications"
 import * as Permissions from "expo-permissions"
@@ -11,6 +20,7 @@ import { QuoteEnd, QuoteStart, Refresh } from "./components/icons"
 import useCachedResources from "./hooks/useCachedResources"
 import { IS_PRODUCTION } from "./lib/config"
 import { Updates } from "expo"
+import { LOCALES } from "./lib/locales"
 
 const NOTIFICATION_TASK = "background-notification-task"
 
@@ -19,8 +29,8 @@ TaskManager.defineTask(NOTIFICATION_TASK, () => {
     Notifications.scheduleNotificationAsync({
       content: {
         sound: "default",
-        title: "Hej!",
-        body: "Czeka na Ciebie nowy komplement!",
+        title: "Hey!",
+        body: "You have a new complement!",
       },
       trigger: null,
     })
@@ -32,7 +42,7 @@ TaskManager.defineTask(NOTIFICATION_TASK, () => {
 })
 
 BackgroundFetch.registerTaskAsync(NOTIFICATION_TASK, {
-  minimumInterval: 60 * 60 * 24,
+  minimumInterval: 60 * 60, // testing 1 hour interval
   stopOnTerminate: false,
   startOnBoot: true,
 })
@@ -45,16 +55,19 @@ Notifications.setNotificationHandler({
   }),
 })
 
+type Locale = "en" | "de" | "pl"
+
 export default function App() {
   const isLoadingComplete = useCachedResources()
   const [compliment, setCompliment] = React.useState("")
   const [checkingUpdates, setCheckingUpdates] = React.useState(false)
   const [ready, setReady] = React.useState(false)
+  const [locale, setLocale] = React.useState<Locale>("en")
 
   const generateCompliment = () => {
-    let index = Math.round(Math.random() * COMPLIMENTS.length) - 1
+    let index = Math.round(Math.random() * COMPLIMENTS[locale].length) - 1
     if (index < 0) index = 0
-    setCompliment(COMPLIMENTS[index])
+    setCompliment(COMPLIMENTS[locale][index])
   }
 
   React.useEffect(() => {
@@ -66,6 +79,10 @@ export default function App() {
       AppState.removeEventListener("change", handleAppStateChange)
     }
   }, [])
+
+  React.useEffect(() => {
+    generateCompliment()
+  }, [locale])
 
   const checkForUpdates = async () => {
     try {
@@ -83,14 +100,14 @@ export default function App() {
   }
 
   const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-    if (AppState.currentState !== "active" && nextAppState === "active") {
+    if (nextAppState === "active") {
       await checkForUpdates()
       generateCompliment()
     }
   }
 
   const handleRefresh = () => {
-    Alert.alert("Nie bądź taka chciwa!")
+    Alert.alert(LOCALES[locale].refreshMessage)
   }
 
   const handlePrivacyPress = () => {
@@ -166,10 +183,34 @@ export default function App() {
           <Refresh fill="#444444" />
         </TouchableOpacity>
         <TouchableOpacity
+          onPress={() => setLocale("en")}
+          style={{ position: "absolute", bottom: 20, right: 160 }}
+        >
+          <View style={locale === "en" && styles.flagActive}>
+            <Text style={styles.flag}>🇬🇧</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setLocale("pl")}
+          style={{ position: "absolute", bottom: 20, right: 200 }}
+        >
+          <View style={locale === "pl" && styles.flagActive}>
+            <Text style={styles.flag}>🇵🇱</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setLocale("de")}
+          style={{ position: "absolute", bottom: 20, right: 240 }}
+        >
+          <View style={locale === "de" && styles.flagActive}>
+            <Text style={styles.flag}>🇩🇪</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={handlePrivacyPress}
           style={{ position: "absolute", bottom: 20, right: 70 }}
         >
-          <Text style={{ color: "#444444", textDecorationLine: "underline" }}>privacy</Text>
+          <Text style={{ color: "#444444", textDecorationLine: "underline" }}>{LOCALES[locale].privacy}</Text>
         </TouchableOpacity>
         <Text style={{ position: "absolute", bottom: 20, right: 20, color: "#444444" }}>v1.0.0</Text>
       </View>
@@ -192,7 +233,7 @@ async function registerForPushNotificationsAsync() {
     }
     token = (await Notifications.getExpoPushTokenAsync()).data
   } else {
-    alert("Must use physical device for Push Notifications")
+    // alert("Must use physical device for Push Notifications")
   }
   if (Platform.OS === "android") {
     Notifications.setNotificationChannelAsync("default", {
@@ -204,3 +245,16 @@ async function registerForPushNotificationsAsync() {
   }
   return token
 }
+
+const styles = StyleSheet.create({
+  flag: {
+    fontSize: 20,
+    paddingHorizontal: 7,
+    paddingBottom: 2,
+  },
+  flagActive: {
+    borderWidth: 1,
+    borderRadius: 5,
+    borderColor: "#444444",
+  },
+})
