@@ -212,7 +212,7 @@ export default function App() {
         >
           <Text style={{ color: "#444444", textDecorationLine: "underline" }}>{LOCALES[locale].privacy}</Text>
         </TouchableOpacity>
-        <Text style={{ position: "absolute", bottom: 20, right: 20, color: "#444444" }}>v1.0.1</Text>
+        <Text style={{ position: "absolute", bottom: 20, right: 20, color: "#444444" }}>v1.0.2</Text>
       </View>
     )
   }
