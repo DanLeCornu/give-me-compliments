@@ -30,7 +30,7 @@ TaskManager.defineTask(NOTIFICATION_TASK, () => {
       content: {
         sound: "default",
         title: "Hey!",
-        body: "You have a new complement!",
+        body: "You have a new compliment!",
       },
       trigger: null,
     })
